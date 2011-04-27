@@ -51,5 +51,5 @@ enum = weighted . zip [1..]
 --
 --      joinWith :: (a -> b -> c) -> P a -> P b -> P c
 --      joinWith f as bs = f <$> as <*> bs
-product :: P a -> P b -> P (a,b)
+product :: (Applicative p) => p a -> p b -> p (a,b)
 product as bs = (,) <$> as <*> bs
