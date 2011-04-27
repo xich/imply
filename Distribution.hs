@@ -5,7 +5,6 @@ import Util
 
 import Control.Applicative
 import Data.Function
-import qualified Data.List as List
 
 -- P(A) - Probability Distribution
 newtype P a = P { unP :: [(a,Float)] }
@@ -32,20 +31,9 @@ instance Monad P where
     return = pure
     (P ps) >>= k = P [(v',p*q) | (v,p) <- ps, (v',q) <- unP $ k v ]
 
-normalize :: [(a,Float)] -> P a
-normalize ps = P [(a,p * z) | (a,p) <- ps]
-    where z = 1 / (sum $ map snd ps)
-
--- better name for this? ensures uniqueness of keys
--- probably a better implementation too
-flatten :: Eq a => [(a,Float)] -> [(a,Float)]
-flatten []              = []
-flatten ps@((name,_):_) = (name, sum $ map snd vs) : flatten ps'
-    where (vs,ps') = List.partition ((== name) . fst) ps
-
 -- Distributions
 weighted :: Eq a => [(a,Float)] -> P a
-weighted = normalize . flatten
+weighted = P . normalize . flatten
 
 uniform :: Eq a => [a] -> P a
 uniform xs = weighted $ zip xs (repeat 1)
