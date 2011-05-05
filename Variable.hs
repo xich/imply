@@ -8,4 +8,5 @@ class (Bounded a, Enum a, Eq a, Show a) => Variable a where
 
 instance Variable ()
 instance (Variable a, Variable b) => Variable (a,b)
-
+instance Variable Char
+instance Variable Int

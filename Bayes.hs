@@ -8,23 +8,20 @@ import Variable
 import Data.List
 import qualified Data.Map as M
 
-data Network k = forall a b. (Variable a, Variable b) => Network (M.Map k (Node k P a)) (M.Map k (Node k (C a) b))
+data Network k = forall a b. (Variable a, Variable b) => Network (M.Map k (Node k (C a) b))
 
 data Node k p a = Node [k] [k] (p a)
 
 vars :: Network k -> [k]
-vars (Network m1 m2) = M.keys m1 ++ M.keys m2
+vars (Network m) = M.keys m
 
 data Factor = forall a b. (Variable a, Variable b) => Factor [(a,b,Float)]
 
 instance Show Factor where
     show (Factor fs) = unlines [show b ++ "|" ++ show a ++ ": " ++ show p | (a,b,p) <- fs]
 
-mkFactor :: (Variable a) => Event a -> P a -> Factor
-mkFactor (_,x) (P ps) = Factor [((),a,p) | (a,p) <- ps, a == x]
-
-mkFactor' :: (Variable a, Variable b) => Event b -> C a b -> Factor
-mkFactor' (_,x) (C f) = Factor [(a,b,p) | a <- domain, (b,p) <- f a, b == x]
+mkFactor :: (Variable a, Variable b) => Event b -> C a b -> Factor
+mkFactor (_,x) (C f) = Factor [(a,b,p) | a <- domain, (b,p) <- f a, b == x]
 
 type Var = String
 

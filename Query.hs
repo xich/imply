@@ -1,7 +1,8 @@
 module Query where
 
+import Conditional
 import Distribution
-import Util
+import Utils
 
 import Control.Applicative
 import Data.Function
@@ -11,7 +12,7 @@ type Event a = a -> Bool
 
 -- Arrows?
 (??) :: Event a -> P a -> Float
-(??) e = sum . map snd . filter (e . fst) . unP
+(??) e = sum . map snd . filter (e . fst) . (\f -> f ()) . unC
 
 dice :: Int -> P [Int]
 dice 0 = pure []

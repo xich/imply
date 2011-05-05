@@ -1,7 +1,7 @@
 module Conditional where
 
-import Distribution
 import Utils
+import Variable
 
 import Control.Applicative
 -- probably would clean up some defs
@@ -26,7 +26,6 @@ import qualified Data.List as List
 --      bgivena :: C Int Char
 --      bgivena = makeC atob
 newtype C a b = C { unC :: a -> [(b,Float)] }
--- type P a = C () a ???
 
 makeC :: (a -> [(b,Float)]) -> C a b
 makeC f = C $ normalize . f
@@ -44,23 +43,15 @@ instance Applicative (C a) where
                                , (b,q) <- g a
                                ])
 
+instance Monad (C a) where
+    return x = C (\_ -> [(x,1.0)])
+    (C f) >>= k = C (\a -> [(b',p*q) | (b,p) <- f a, (b',q) <- unC (k b) a])
+
 instance (Bounded a, Enum a, Show a, Show b) => Show (C a b) where
     show (C f) = unlines [show b ++ "|" ++ show a ++ ": " ++ show p | a <- [minBound..maxBound], (b,p) <- f a]
 
--- note: P(A,B) = P(B|A)P(A)
-prod :: (Eq a) => C a b -> P a -> P (a,b)
-prod (C c) (P ps) = P [((a,b),p*q) | (a,p) <- ps, (b,q) <- c a]
-
--- P(B|A) = P(A,B)/P(A)
--- would be nice to have unordered tuples here
-divl :: (Eq a) => P (a,b) -> P a -> C a b
-divl (P ts) (P ps) = C (\a -> [ (b,p/q)
-                              | ((_,b),p) <- filter ((== a) . fst . fst) ts
-                              , (    _,q) <- filter ((== a) . fst) ps])
-
--- P(B|A) = P(A,B)/P(B)
-divr :: (Eq b) => P (a,b) -> P b -> C b a
-divr bas = divl (fmap swap bas)
+instance (Variable a, Variable b) => Eq (C a b) where
+    (C c) == (C c') = and [c d == c' d | d <- domain]
 
 cdomain :: (Bounded a, Enum a, Eq b) => C a b -> [b]
 cdomain (C f) = List.nub $ map fst $ concatMap f [minBound..maxBound]
