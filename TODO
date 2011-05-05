@@ -11,4 +11,4 @@ many ints actually are present, and if you try to
 multiply that by a C Int, you have no idea if the
 _same_ ints are present.
 
-
+Make Bayes Net heterogenous!

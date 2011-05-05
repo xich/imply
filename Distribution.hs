@@ -1,7 +1,7 @@
 -- Compare with PFP: http://web.engr.oregonstate.edu/~erwig/papers/PFP_JFP06.pdf
 module Distribution where
 
-import Util
+import Utils
 
 import Control.Applicative
 import Data.Function
@@ -38,8 +38,8 @@ weighted = P . normalize . flatten
 uniform :: Eq a => [a] -> P a
 uniform xs = weighted $ zip xs (repeat 1)
 
-enum :: [Float] -> P Int
-enum = weighted . zip [1..]
+enum :: (Bounded a, Enum a, Eq a) => [Float] -> P a
+enum = weighted . zip [minBound..maxBound]
 
 -- Contrast this with the PFP definition:
 --

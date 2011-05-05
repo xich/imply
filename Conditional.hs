@@ -1,7 +1,7 @@
 module Conditional where
 
 import Distribution
-import Util
+import Utils
 
 import Control.Applicative
 -- probably would clean up some defs
@@ -44,6 +44,9 @@ instance Applicative (C a) where
                                , (b,q) <- g a
                                ])
 
+instance (Bounded a, Enum a, Show a, Show b) => Show (C a b) where
+    show (C f) = unlines [show b ++ "|" ++ show a ++ ": " ++ show p | a <- [minBound..maxBound], (b,p) <- f a]
+
 -- note: P(A,B) = P(B|A)P(A)
 prod :: (Eq a) => C a b -> P a -> P (a,b)
 prod (C c) (P ps) = P [((a,b),p*q) | (a,p) <- ps, (b,q) <- c a]
@@ -58,6 +61,9 @@ divl (P ts) (P ps) = C (\a -> [ (b,p/q)
 -- P(B|A) = P(A,B)/P(B)
 divr :: (Eq b) => P (a,b) -> P b -> C b a
 divr bas = divl (fmap swap bas)
+
+cdomain :: (Bounded a, Enum a, Eq b) => C a b -> [b]
+cdomain (C f) = List.nub $ map fst $ concatMap f [minBound..maxBound]
 
 {-
 -- P(B|A) - Conditional Probability
