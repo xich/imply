@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 module Utils where
 
 import Data.Maybe
@@ -26,13 +25,3 @@ flatten :: Eq a => [(a,Float)] -> [(a,Float)]
 flatten []              = []
 flatten ps@((name,_):_) = (name, sum $ map snd vs) : flatten ps'
     where (vs,ps') = List.partition ((== name) . fst) ps
-
--- We need this for now.
-instance (Bounded a, Bounded b, Enum a, Enum b) => Enum (a,b) where
-    fromEnum (x,y) = bSize * (fromEnum x) + (fromEnum y)
-        where bSize = fromEnum (maxBound :: b) - fromEnum (minBound :: b) + 1
-
-    toEnum i = (x,y)
-        where bSize = fromEnum (maxBound :: b) - fromEnum (minBound :: b) + 1
-              x = toEnum (i `div` bSize)
-              y = toEnum (i `mod` bSize)

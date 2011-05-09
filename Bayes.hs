@@ -25,12 +25,12 @@ mkFactor (_,x) (C f) = Factor [(a,b,p) | a <- domain, (b,p) <- f a, b == x]
 
 type Var = String
 
-pointwise :: [Factor] -> P a
+pointwise :: [Factor] -> HP a
 pointwise factors = undefined
 
 type Event a = (Var,a)
 
-elim :: Var -> [Event a] -> Network Var -> P a
+elim :: Var -> [Event a] -> Network Var -> HP a
 elim x ev bn = pointwise $ go (reverse $ vars bn) []
     where go :: [Var] -> [Factor] -> [Factor]
           go (v:vs) factors = go vs (if v `elem` hiddens then sumout v factors' else factors')

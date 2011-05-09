@@ -1,5 +1,7 @@
+{-# LANGUAGE TypeOperators, FlexibleContexts #-}
 module Conditional where
 
+import HSet
 import Utils
 import Variable
 
@@ -8,6 +10,21 @@ import Control.Applicative
 -- import Control.Arrow
 import Data.Function
 import qualified Data.List as List
+
+-- Distributions with heterogeneous sets
+newtype HC ha hb = HC { unHC :: ha -> [(hb,Float)] }
+
+mkHC :: (a -> [(b,Float)]) -> HC (Singleton a) (Singleton b)
+mkHC f = HC (\ha -> [(singleton b,p) | (b,p) <- f $ hMember ha])
+
+-- #1 assert a and b are different, #2 is stupid afaict
+mkTupleHC :: (HNotMember a (Singleton b), HMember b (a :>: (Singleton b)))
+          => ((a,b) -> [(c,Float)]) -> HC (a :>: (Singleton b)) (Singleton c)
+mkTupleHC f = HC (\hab -> [(singleton c,p) | (c,p) <- f (hMember hab, hMember hab)])
+
+instance (Variable a, Show b) => Show (HC a b) where
+    show (HC f) = unlines [show b ++ "|" ++ show a ++ ": " ++ show p | a <- domain, (b,p) <- f a]
+
 
 -- Old definition:
 --
@@ -47,8 +64,8 @@ instance Monad (C a) where
     return x = C (\_ -> [(x,1.0)])
     (C f) >>= k = C (\a -> [(b',p*q) | (b,p) <- f a, (b',q) <- unC (k b) a])
 
-instance (Bounded a, Enum a, Show a, Show b) => Show (C a b) where
-    show (C f) = unlines [show b ++ "|" ++ show a ++ ": " ++ show p | a <- [minBound..maxBound], (b,p) <- f a]
+instance (Variable a, Show b) => Show (C a b) where
+    show (C f) = unlines [show b ++ "|" ++ show a ++ ": " ++ show p | a <- domain, (b,p) <- f a]
 
 instance (Variable a, Variable b) => Eq (C a b) where
     (C c) == (C c') = and [c d == c' d | d <- domain]

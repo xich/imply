@@ -1,6 +1,7 @@
 -- Compare with PFP: http://web.engr.oregonstate.edu/~erwig/papers/PFP_JFP06.pdf
 module Distribution where
 
+import HSet
 import Utils
 import Conditional
 import Variable
@@ -11,16 +12,16 @@ import Data.Function
 -- Distributions are just conditional distributions where
 -- the conditioning variable only has one possible value
 -- which happens 100% of the time: unit.
-type P a = C () a
+type HP a = HC (Singleton ()) a
 
 -- Distributions
-weighted :: Eq a => [(a,Float)] -> P a
-weighted = makeC . const
+weighted :: Eq a => [(a,Float)] -> HP (Singleton a)
+weighted = mkHC . const
 
-uniform :: Eq a => [a] -> P a
+uniform :: Eq a => [a] -> HP (Singleton a)
 uniform xs = weighted $ zip xs (repeat 1)
 
-enum :: (Bounded a, Enum a, Eq a) => [Float] -> P a
+enum :: (Bounded a, Enum a, Eq a) => [Float] -> HP (Singleton a)
 enum = weighted . zip [minBound..maxBound]
 
 -- Contrast this with the PFP definition:
@@ -39,13 +40,14 @@ product as bs = (,) <$> as <*> bs
 -- note: P(A,B) = P(B|A)P(A)
 -- this is different in product above, because we are chaining
 -- prod :: (Eq a) => C a b -> P a -> P (a,b) -- the following is more general
+{-
 prod :: (Eq a) => C a b -> C u a -> C u (a,b)
 prod (C bga) (C as) = C (\u -> [((a,b),p*q) | (a,p) <- as u, (b,q) <- bga a])
 
 -- P(B|A) = P(A,B)/P(A)
 -- would be nice to have unordered tuples here
-divl :: (Eq a) => P (a,b) -> P a -> C a b
-divl (C abs) (C as) = C (\a -> [ (b,p/q)
+divl :: (Eq a) => HP (a,b) -> HP a -> HC a b
+divl (HC abs) (HC as) = HC (\a -> [ (b,p/q)
                               | ((_,b),p) <- filter ((== a) . fst . fst) $ concatMap abs domain
                               , (    _,q) <- filter ((== a) . fst) $ concatMap as domain])
 {-
@@ -55,8 +57,9 @@ divl (P ts) (P ps) = C (\a -> [ (b,p/q)
 -}
 
 -- P(B|A) = P(A,B)/P(B)
-divr :: (Eq b) => P (a,b) -> P b -> C b a
+divr :: (Eq b) => HP (a,b) -> HP b -> HC b a
 divr bas = divl (fmap swap bas)
+-}
 
 {-
 -- P(A) - Probability Distribution
