@@ -46,7 +46,4 @@ pm = mkHC c
     where c A =    [(M,0.7) ,(NotM,0.3)]
           c NotA = [(M,0.01),(NotM,0.99)]
 
-{-
-net :: Network String
-net = Network (M.fromList [("B",pb),("E",pe)]) (M.fromList [("A",pa),("J",pj),("M",pm)])
--}
+network = Network $ pb .>. pa .>. pe .>. pj .>. (singleton pm)

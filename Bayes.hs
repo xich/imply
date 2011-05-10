@@ -10,9 +10,6 @@ import Variable
 import Data.List
 import qualified Data.Map as M
 
--- pointwise :: [Factor] -> HP a
-pointwise factors = undefined
-
 -- heterogenous set of HP's and HC's make up a network
 newtype (HSet s) => Network s = Network { dists :: s }
 -- heterogenous set of observations makes up the evidence
@@ -42,22 +39,27 @@ elim x (Evidence e) n = pointwise $ hFoldr (FoldNetworkToFactors hiddens e) hEmp
           hiddens = (vars n) `hDiff` (x .>. e)
 
 -- list of probabilities, with heterogeneous sets as keys
-newtype (HSet i, Variable i, HSet o, Variable o) => Factor i o = Factor [(i,o,Float)]
+newtype (HSet vs, Variable vs) => Factor vs = Factor [(vs,Float)]
     deriving (Show)
 
-conditionOn :: (HSet e, Variable e, HIntersection e v s, HUnion s v v')
-                 => Evidence e -> v -> v'
-conditionOn (Evidence e) v = (e .*. v) .+. v
+conditionOn :: forall e v s v'.
+               (HSet e, Variable e, HSet v, HIntersection e v s, HUnion s v v', HReorder v' v)
+                 => Evidence e -> v -> v
+conditionOn (Evidence e) v = ((e .*. v) .+. v) `hReorder` (witness :: v)
 
-mkFactor :: forall a b e a' b' s s' tf tf'.
+mkFactor :: forall a b e s s' a' b' vs.
             ( Variable a, Variable b, Variable e, Variable a', Variable b'
-            , HSet a, HSet b, HSet e, HSet a', HSet b', HSet s, HSet s', HBool tf, HBool tf'
-            , HIntersection e a' s, HUnion s a' a, HEqual a a tf
-            , HIntersection e b s', HUnion s' b b', HEqual b' b' tf', a ~ a', b ~ b')
-         => HC a b -> Evidence e -> Factor a' b'
-mkFactor (HC f) e = Factor [(i,o,p) | i <- nubBy (.==.) $ map (conditionOn e) (domain :: [a'])
-                                    , (o,p) <- f i
-                                    , o .==. (conditionOn e o)] -- also need to condition o on e
+            , HSet a, HSet b, HSet e, HSet s, HSet s', HSet a', HSet b'
+            , HIntersection e a s, HUnion s a a', HReorder a' a, HEqual a a
+            , HIntersection e b s', HUnion s' b b', HReorder b' b, HEqual b b
+            , Variable vs, HSet vs, HUnion a b vs)
+         => HC a b -> Evidence e -> Factor vs
+mkFactor (HC f) e = Factor [(i .+. o,p) | i <- nubBy (.==.) $ map (conditionOn e) (domain :: [a])
+                                        , (o,p) <- f i
+                                        , o .==. (conditionOn e o)]
+
+-- pointwise :: [Factor] -> HP a
+pointwise factors = undefined
 
 -- sumout :: Var -> [Factor] -> [Factor]
 sumout = undefined
