@@ -130,17 +130,17 @@ instance (HSet s, HElem e s b) => HElem e (HAdd e' s) b where hElem e (HAdd _ s)
 -- Sets must be same length, have same types, and values of each type must be equal.
 -- As this is set equality, ordering obviously doesn't matter.
 infix .==.
-(.==.) :: (HEqual s s' b) => s -> s' -> Bool
+(.==.) :: (HEqual s s') => s -> s' -> Bool
 (.==.) = hEqual
 
-class (HSet s, HSet s', HBool b) => HEqual s s' b | s s' -> b where hEqual :: s -> s' -> Bool
-instance HEqual HTip HTip HTrue where hEqual _ _ = True
-instance (HSet s) => HEqual HTip (HAdd e s) HFalse where hEqual _ _ = False
-instance (HSet s, HElem e s' b, HEqualCase b e s s' b') => HEqual (HAdd e s) s' b' where hEqual (HAdd e s) s' = hEqualCase e (hElem e s') s s'
+class (HSet s, HSet s') => HEqual s s' where hEqual :: s -> s' -> Bool
+instance HEqual HTip HTip where hEqual _ _ = True
+instance (HSet s) => HEqual HTip (HAdd e s) where hEqual _ _ = False
+instance (HSet s, HElem e s' b, HEqualCase b e s s') => HEqual (HAdd e s) s' where hEqual (HAdd e s) s' = hEqualCase e (hElem e s') s s'
 
-class (HBool b') => HEqualCase b e s s' b' | b e s s' -> b' where hEqualCase :: e -> (b,e) -> s -> s' -> Bool
-instance HEqualCase HFalse e s s' HFalse where hEqualCase _ _ _ _ = False
-instance (Eq e, HDelete e s' s'', HEqual s s'' b') => HEqualCase HTrue e s s' b' where hEqualCase e (_,e') s s' = (e == e') && (hEqual s (hDelete e' s'))
+class HEqualCase b e s s' where hEqualCase :: e -> (b,e) -> s -> s' -> Bool
+instance HEqualCase HFalse e s s' where hEqualCase _ _ _ _ = False
+instance (Eq e, HDelete e s' s'', HEqual s s'') => HEqualCase HTrue e s s' where hEqualCase e (_,e') s s' = (e == e') && (hEqual s (hDelete e' s'))
 
 ---------- HSET ----------------------
 data HTip = HTip         deriving (Eq)
