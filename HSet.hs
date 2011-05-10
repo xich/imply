@@ -30,12 +30,14 @@ class (HBool b) => HUnionCase b s e s' s'' | b s e s' -> s'' where hUnionCase ::
 instance (HUnion (HAdd e s) s' s'') => HUnionCase HFalse s e s' s'' where hUnionCase _ s e s' = hUnion (HAdd e s) s'
 instance (HUnion s s' s'') => HUnionCase HTrue s e s' s'' where hUnionCase _ s _ s' = hUnion s s'
 
+-- | Type level deletion, deletes any value matching the type of the first argument, which is a witness only
 class (HSet s, HSet s') => HDelete e s s' | e s -> s' where hDelete :: e -> s -> s'
 instance HDelete e HTip HTip where hDelete _ = id -- empty set
 instance (HSet s) => HDelete e (HAdd e s) s where hDelete _ (HAdd _ s) = s -- element found
 instance (HSet s, HSet s', HDelete e s s', s'' ~ (HAdd e' s')) => HDelete e (HAdd e' s) s'' where -- recursive case
     hDelete e (HAdd e' s) = HAdd e' (hDelete e s)
 
+-- | Type level merge, will fail if sets share a type
 class HMerge s s' s'' | s s' -> s'' where hMerge :: s -> s' -> s''
 instance HSet s' => HMerge HTip s' s' where hMerge _ = id
 instance (HSet s, HSet s', HNotMember e s', HMerge s s' s'') => HMerge (HAdd e s) s' (HAdd e s'') where hMerge (HAdd e s) = HAdd e . (hMerge s)
