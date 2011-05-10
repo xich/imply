@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, MultiParamTypeClasses, FunctionalDependencies,
+{-# LANGUAGE TypeOperators, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts,
              FlexibleInstances, TypeFamilies, UndecidableInstances, OverlappingInstances #-}
 module HSet where
 
@@ -49,6 +49,11 @@ hApply :: (HMember a s, HNotMember b s, HDelete a s s', HNotMember b s')
 hApply f s = (f a) .>. s'
     where a = hMember s
           s' = hDelete a s
+
+-- | Reverse a HSet (ignore the fact that sets should be unordered!)
+-- Depends on an implementation detail of hUnion
+hReverse :: (HUnion HTip s s') => s -> s'
+hReverse s = hUnion hEmpty s
 
 {-
 -- note, this can violate the TIP property right now
