@@ -24,22 +24,26 @@ instance (HUnion a b s', HSet s', HUnion s s' s'') => HFoldOp FoldWithVarsHCUnio
 vars :: (HFoldr FoldWithVarsHCUnion HTip n s') => Network n -> s'
 vars n = hFoldr FoldWithVarsHCUnion HTip (dists n)
 
+data FoldNetworkToFactors hs es = FoldNetworkToFactors hs es
+instance (HBool b, HElem v hs b, Variable v, Variable hs, Variable es
+         , {- not real yet -} s'' ~ HAdd v s, HNotMember v s) => HFoldOp (FoldNetworkToFactors hs es) v s s'' where
+    hFoldOp (FoldNetworkToFactors hs es) v factors = let newFactor = makefactor v es
+                                                         factors' = newFactor .>. factors
+                                                     in if true (v `hElem` hs) then sumout v factors' else factors'
+
 elim :: ( Variable x, HNotMember x e, Variable e
         , HSet n, HFoldr FoldWithVarsHCUnion HTip n vars
-        , HDiff vars (x :>: e) hiddens) => x -> Evidence e -> Network n -> HP x
-elim x (Evidence e) n = pointwise $ go ({- hreverse $-} vars n) hEmpty
-    where -- go :: [Var] -> [Factor] -> HSet Factor -- obviously not the actual type, but keep in mind
-          go = undefined
-{-
-          go HTip       factors = factors
-          go (HAdd e s) factors = go s (if true (e `hElem` hiddens) then sumout e factors' else factors')
-            where factors' = (makefactor e ev) .>. factors
--}
-          -- hiddens :: hiddens
+        , HFoldr (FoldNetworkToFactors hs e) HTip vars fs
+        , HDiff vars (x :>: e) hs)
+     => x -> Evidence e -> Network n -> HP x
+elim x (Evidence e) n = pointwise $ hFoldr (FoldNetworkToFactors hiddens e) hEmpty ({- hReverse $-} vars n)
+    where -- hiddens :: hs
           hiddens = (vars n) `hDiff` (x .>. e)
 
 -- sumout :: Var -> [Factor] -> [Factor]
 sumout = undefined
 
 -- makefactor :: Var -> Events s -> Factor
-makefactor = undefined
+-- not the real type yet
+makefactor :: (Variable v, Variable e) => v -> e -> v
+makefactor = const
