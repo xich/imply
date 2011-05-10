@@ -14,6 +14,9 @@ import qualified Data.List as List
 -- Distributions with heterogeneous sets
 newtype HC ha hb = HC { unHC :: ha -> [(hb,Float)] }
 
+varsHC :: (HSet s, HUnion ha hb s) => HC ha hb -> s
+varsHC _ = witness
+
 mkHC :: (a -> [(b,Float)]) -> HC (Singleton a) (Singleton b)
 mkHC f = HC (\ha -> [(singleton b,p) | (b,p) <- f $ hMember ha])
 

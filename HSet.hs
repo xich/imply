@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts,
+{-# LANGUAGE TypeOperators, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts, ScopedTypeVariables,
              FlexibleInstances, TypeFamilies, UndecidableInstances, OverlappingInstances #-}
 module HSet where
 
@@ -89,10 +89,10 @@ data HAdd e s = HAdd e s deriving (Eq)
 
 type e :>: s = HAdd e s
 
-class HSet s
+class HSet s where witness :: s
 
-instance HSet HTip
-instance HSet s => HSet (HAdd e s)
+instance HSet HTip where witness = HTip
+instance HSet s => HSet (HAdd e s) where witness = HAdd (error "witness" :: e) (witness :: s)
 
 class HSet s => HShow s where hshow :: s -> String
 instance HShow HTip where hshow _ = "}"
