@@ -58,6 +58,16 @@ mkFactor (HC f) e = Factor [(i .+. o,p) | i <- nubBy (.==.) $ map (conditionOn e
                                         , (o,p) <- f i
                                         , o .==. (conditionOn e o)]
 
+point :: ( HSet as, HSet bs, HSet abs
+         , Variable as, Variable bs, Variable abs
+         , HIntersection as bs s, HIntersection bs as s', HEqual s s'
+         , HUnion as bs abs)
+      => Factor as -> Factor bs -> Factor abs
+point (Factor as) (Factor bs) = Factor [ (a .+. b, p * q)
+                                       | (a,p) <- as
+                                       , (b,q) <- bs
+                                       , (a .*. b) .==. (b .*. a) ]
+
 -- pointwise :: [Factor] -> HP a
 pointwise factors = undefined
 
