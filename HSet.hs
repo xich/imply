@@ -42,6 +42,12 @@ class HMerge s s' s'' | s s' -> s'' where hMerge :: s -> s' -> s''
 instance HSet s' => HMerge HTip s' s' where hMerge _ = id
 instance (HSet s, HSet s', HNotMember e s', HMerge s s' s'') => HMerge (HAdd e s) s' (HAdd e s'') where hMerge (HAdd e s) = HAdd e . (hMerge s)
 
+class (HSet s) => HFoldr f v s s' | f v s -> s' where hFoldr :: f -> v -> s -> s'
+instance HFoldr f v HTip v where hFoldr _ v _ = v
+instance (HSet s, HFoldr f v s s', HFoldOp f e s' s'') => HFoldr f v (HAdd e s) s'' where hFoldr f v (HAdd e s) = hFoldOp f e (hFoldr f v s)
+
+class HFoldOp f e s s' | f e s -> s' where hFoldOp :: f -> e -> s -> s'
+
 -- 1. a value of type 'a' must be in s
 -- 2. a value of type 'b' must not be in s
 -- 3. calculate the type of the set with the 'a' value deleted
