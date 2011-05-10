@@ -1,45 +1,36 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Bayes where
 
-import Distribution
 import Conditional
+import Distribution
+import HSet
 import Variable
 
 import Data.List
 import qualified Data.Map as M
 
-data Network k = forall a b. (Variable a, Variable b) => Network (M.Map k (Node k (C a) b))
-
-data Node k p a = Node [k] [k] (p a)
-
-vars :: Network k -> [k]
-vars (Network m) = M.keys m
-
-data Factor = forall a b. (Variable a, Variable b) => Factor [(a,b,Float)]
-
-instance Show Factor where
-    show (Factor fs) = unlines [show b ++ "|" ++ show a ++ ": " ++ show p | (a,b,p) <- fs]
-
-mkFactor :: (Variable a, Variable b) => Event b -> C a b -> Factor
-mkFactor (_,x) (C f) = Factor [(a,b,p) | a <- domain, (b,p) <- f a, b == x]
-
-type Var = String
-
-pointwise :: [Factor] -> HP a
+-- pointwise :: [Factor] -> HP a
 pointwise factors = undefined
 
-type Event a = (Var,a)
+-- heterogenous set of HP's and HC's make up a network
+newtype (HSet s) => Network s = Network { vars :: s }
+-- heterogenous set of observations makes up the evidence
+newtype (HSet s, Variable s) => Evidence s = Evidence s
 
-elim :: Var -> [Event a] -> Network Var -> HP a
-elim x ev bn = pointwise $ go (reverse $ vars bn) []
-    where go :: [Var] -> [Factor] -> [Factor]
-          go (v:vs) factors = go vs (if v `elem` hiddens then sumout v factors' else factors')
-            where factors' = makefactor v ev : factors
+elim :: (Variable x, HSet n) => x -> Evidence e -> Network n -> HP x
+elim x ev bn = pointwise $ go ({- hreverse $-} vars bn) hEmpty
+    where -- go :: [Var] -> [Factor] -> HSet Factor -- obviously not the actual type, but keep in mind
+          go = undefined
+{-
+          go HTip       factors = factors
+          go (HAdd e s) factors = go s (if true (e `hElem` hiddens) then sumout e factors' else factors')
+            where factors' = (makefactor e ev) .>. factors
+-}
 
-          hiddens = vars bn \\ (x : map fst ev)
+          hiddens = undefined -- vars bn \\ (x : map fst ev)
 
-sumout :: Var -> [Factor] -> [Factor]
+-- sumout :: Var -> [Factor] -> [Factor]
 sumout = undefined
 
-makefactor :: Var -> [Event a] -> Factor
+-- makefactor :: Var -> Events s -> Factor
 makefactor = undefined

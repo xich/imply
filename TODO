@@ -1,8 +1,3 @@
-Unify the P and C types. This _almost_ works where:
-     type P a = C () a
-but then the Applicative instance won't work when
-you try to ap a C to a P.
-
 Parallelize the Applicative instance somehow?
 
 Currently, there is no enforcement of the distribution
@@ -11,4 +6,3 @@ many ints actually are present, and if you try to
 multiply that by a C Int, you have no idea if the
 _same_ ints are present.
 
-Make Bayes Net heterogenous!

@@ -16,6 +16,18 @@ instance HNotMember e HTip
 instance (HNotMember e s) => HNotMember e (HAdd e' s)
 instance (Error (TypeFound e), HSet s) => HNotMember e (HAdd e s)
 
+class HUnion s s' s'' | s s' -> s'' where hUnion :: s -> s' -> s''
+instance HUnion HTip s s where hUnion _ s = s -- first set is empty
+instance (HElem e s' b, HUnionCase b e s s' s'') => HUnion (HAdd e s) s' s'' where hUnion (HAdd e s) s' = hUnionCase (hElem e s') e s s'
+
+class (HBool b) => HUnionCase b e s s' s'' | b e s s' -> s'' where hUnionCase :: b -> e -> s -> s' -> s''
+instance (HUnion s (HAdd e s') s'') => HUnionCase HFalse e s s' s'' where hUnionCase _ e s s' = hUnion s (HAdd e s')
+instance (HUnion s s' s'') => HUnionCase HTrue e s s' s'' where hUnionCase _ _ s s' = hUnion s s'
+{-
+instance (HElem e s' HFalse, HUnion s (HAdd e s') s'') => HUnion (HAdd e s) s' s'' where hUnion (HAdd e s) s' = hUnion s (HAdd e s') -- can add to second
+instance (HElem e s' HTrue, HUnion s s' s'') => HUnion (HAdd e s) s' s'' where hUnion (HAdd _ s) s' = hUnion s s' -- already present in the second
+-}
+
 class (HSet s, HSet s') => HDelete e s s' | e s -> s' where hDelete :: e -> s -> s'
 instance HDelete e HTip HTip where hDelete _ = id -- empty set
 instance (HSet s) => HDelete e (HAdd e s) s where hDelete _ (HAdd _ s) = s -- element found
@@ -30,11 +42,12 @@ instance (HSet s, HSet s', HNotMember e s', HMerge s s' s'') => HMerge (HAdd e s
 -- 2. a value of type 'b' must not be in s
 -- 3. calculate the type of the set with the 'a' value deleted
 -- 4. assert that a value of type 'b' is not already in that (implied by 2 I know, but required by ghc anyway)
-happly :: (HMember a s, HNotMember b s, HDelete a s s', HNotMember b s')
+hApply :: (HMember a s, HNotMember b s, HDelete a s s', HNotMember b s')
      => (a -> b) -> s -> (HAdd b s')
-happly f s = (f a) .>. s'
+hApply f s = (f a) .>. s'
     where a = hMember s
           s' = hDelete a s
+
 {-
 -- note, this can violate the TIP property right now
 class HMap f h h' | f h -> h' where hmap :: f -> h -> h'
@@ -43,16 +56,23 @@ instance (HSet s) => HMap (a -> b) (HAdd a s) (HAdd b s) where hmap f (HAdd a s)
 instance (HSet s, HSet s', s'' ~ (HAdd c s'), HMap (a -> b) s s') => HMap (a -> b) (HAdd c s) s'' where hmap f (HAdd c s) = HAdd c (hmap f s) -- recursive case
 -}
 
+-- Heterogeneous Predicates
 data HTrue = HTrue   deriving (Eq,Show,Read)
 data HFalse = HFalse deriving (Eq,Show,Read)
 
-class HBool b
-instance HBool HTrue
-instance HBool HFalse
+class HBool b where true :: b -> Bool
+instance HBool HTrue where true _ = True
+instance HBool HFalse where true _ = False
 
+-- These never fail at compile time
 class HNull s b | s -> b where hNull :: s -> b
 instance HNull HTip HTrue where hNull _ = HTrue
 instance HNull (HAdd e s) HFalse where hNull _ = HFalse
+
+class (HSet s, HBool b) => HElem e s b | e s -> b where hElem :: e -> s -> b
+instance HElem e HTip HFalse where hElem _ _ = HFalse
+instance (HSet s, HNotMember e s) => HElem e (HAdd e s) HTrue where hElem _ (HAdd _ _) = HTrue
+instance (HSet s, HElem e s b) => HElem e (HAdd e' s) b where hElem e (HAdd _ s) = hElem e s
 
 ---------- HSET ----------------------
 data HTip = HTip         deriving (Eq)
@@ -82,8 +102,9 @@ infixr .>.
 
 type Singleton a = a :>: HTip
 singleton = (.>. HTip)
+hEmpty = HTip
 
-hfmap f = fmap (happly f)
+hFmap f = fmap (hApply f)
 
 test = (42 :: Int) .>. "hi" .>. ('a',12::Int) .>. HTip
 
