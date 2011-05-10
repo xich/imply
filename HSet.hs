@@ -16,17 +16,19 @@ instance HNotMember e HTip
 instance (HNotMember e s) => HNotMember e (HAdd e' s)
 instance (Error (TypeFound e), HSet s) => HNotMember e (HAdd e s)
 
-class HUnion s s' s'' | s s' -> s'' where hUnion :: s -> s' -> s''
-instance HUnion HTip s s where hUnion _ s = s -- first set is empty
-instance (HElem e s' b, HUnionCase b e s s' s'') => HUnion (HAdd e s) s' s'' where hUnion (HAdd e s) s' = hUnionCase (hElem e s') e s s'
+-- | Type level difference, all values in first set whose types are present in second set are removed
+class HDiff s s' s'' | s s' -> s'' where hDiff :: s -> s' -> s''
+instance HDiff s HTip s where hDiff = const
+instance (HDelete e s s'', HDiff s'' s' s''') => HDiff s (HAdd e s') s''' where hDiff s (HAdd e s') = hDiff (hDelete e s) s'
 
-class (HBool b) => HUnionCase b e s s' s'' | b e s s' -> s'' where hUnionCase :: b -> e -> s -> s' -> s''
-instance (HUnion s (HAdd e s') s'') => HUnionCase HFalse e s s' s'' where hUnionCase _ e s s' = hUnion s (HAdd e s')
-instance (HUnion s s' s'') => HUnionCase HTrue e s s' s'' where hUnionCase _ _ s s' = hUnion s s'
-{-
-instance (HElem e s' HFalse, HUnion s (HAdd e s') s'') => HUnion (HAdd e s) s' s'' where hUnion (HAdd e s) s' = hUnion s (HAdd e s') -- can add to second
-instance (HElem e s' HTrue, HUnion s s' s'') => HUnion (HAdd e s) s' s'' where hUnion (HAdd _ s) s' = hUnion s s' -- already present in the second
--}
+-- | Type level union, giving preference to values present in the first set.
+class HUnion s s' s'' | s s' -> s'' where hUnion :: s -> s' -> s''
+instance HUnion s HTip s where hUnion = const
+instance (HElem e s b, HUnionCase b s e s' s'') => HUnion s (HAdd e s') s'' where hUnion s (HAdd e s') = hUnionCase (hElem e s) s e s'
+
+class (HBool b) => HUnionCase b s e s' s'' | b s e s' -> s'' where hUnionCase :: b -> s -> e -> s' -> s''
+instance (HUnion (HAdd e s) s' s'') => HUnionCase HFalse s e s' s'' where hUnionCase _ s e s' = hUnion (HAdd e s) s'
+instance (HUnion s s' s'') => HUnionCase HTrue s e s' s'' where hUnionCase _ s _ s' = hUnion s s'
 
 class (HSet s, HSet s') => HDelete e s s' | e s -> s' where hDelete :: e -> s -> s'
 instance HDelete e HTip HTip where hDelete _ = id -- empty set
