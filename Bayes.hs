@@ -29,7 +29,7 @@ instance (HBool b, HElem v hs b, Variable v, Variable hs, Variable es
          , {- not real yet -} s'' ~ HAdd v s, HNotMember v s) => HFoldOp (FoldNetworkToFactors hs es) v s s'' where
     hFoldOp (FoldNetworkToFactors hs es) v factors = let newFactor = makefactor v es
                                                          factors' = newFactor .>. factors
-                                                     in if true (v `hElem` hs) then sumout v factors' else factors'
+                                                     in if (true . fst) (v `hElem` hs) then sumout v factors' else factors'
 
 elim :: ( Variable x, HNotMember x e, Variable e
         , HSet n, HFoldr FoldWithVarsHCUnion HTip n vars

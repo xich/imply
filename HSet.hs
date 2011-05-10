@@ -22,22 +22,28 @@ instance HDiff s HTip s where hDiff = const
 instance (HDelete e s s'', HDiff s'' s' s''') => HDiff s (HAdd e s') s''' where hDiff s (HAdd e s') = hDiff (hDelete e s) s'
 
 -- | Type level union, giving preference to values present in the first set.
+infixl .+.
+(.+.) :: (HUnion s s' s'') => s -> s' -> s''
+(.+.) = hUnion
+
 class HUnion s s' s'' | s s' -> s'' where hUnion :: s -> s' -> s''
 instance HUnion s HTip s where hUnion = const
-instance (HElem e s b, HUnionCase b s e s' s'') => HUnion s (HAdd e s') s'' where hUnion s (HAdd e s') = hUnionCase (hElem e s) s e s'
+instance (HElem e s b, HUnionCase b s e s' s'') => HUnion s (HAdd e s') s'' where hUnion s (HAdd e s') = hUnionCase (fst $ hElem e s) s e s'
 
 class (HBool b) => HUnionCase b s e s' s'' | b s e s' -> s'' where hUnionCase :: b -> s -> e -> s' -> s''
 instance (HUnion (HAdd e s) s' s'') => HUnionCase HFalse s e s' s'' where hUnionCase _ s e s' = hUnion (HAdd e s) s'
 instance (HUnion s s' s'') => HUnionCase HTrue s e s' s'' where hUnionCase _ s _ s' = hUnion s s'
 
 -- | Type level intersection, keeping values present in the first set.
-hIntersection :: (HIntersection HTip s s' s'') => s -> s' -> s''
+infixl .*.
+hIntersection, (.*.) :: (HIntersection HTip s s' s'') => s -> s' -> s''
+(.*.) = hIntersection
 hIntersection = hIntersection' HTip
 
 class HIntersection a s s' s'' | a s s' -> s'' where hIntersection' :: a -> s -> s' -> s''
 instance HIntersection a HTip s' a where hIntersection' acc _ _ = acc
 instance (HElem e s' b, HIntersectionCase b a e s s' s'') => HIntersection a (HAdd e s) s' s''
-    where hIntersection' a (HAdd e s) s' = hIntersectionCase (hElem e s') a e s s'
+    where hIntersection' a (HAdd e s) s' = hIntersectionCase (fst $ hElem e s') a e s s'
 
 class (HBool b) => HIntersectionCase b a e s s' s'' | b a e s s' -> s'' where hIntersectionCase :: b -> a -> e -> s -> s' -> s''
 instance (HIntersection a s s' s'') => HIntersectionCase HFalse a e s s' s'' where hIntersectionCase _ a _ s s' = hIntersection' a s s'
@@ -56,6 +62,7 @@ class HMerge s s' s'' | s s' -> s'' where hMerge :: s -> s' -> s''
 instance HSet s' => HMerge HTip s' s' where hMerge _ = id
 instance (HSet s, HSet s', HNotMember e s', HMerge s s' s'') => HMerge (HAdd e s) s' (HAdd e s'') where hMerge (HAdd e s) = HAdd e . (hMerge s)
 
+-- | Type level foldr, first argument (function) must have a HFoldOp instance
 class (HSet s) => HFoldr f v s s' | f v s -> s' where hFoldr :: f -> v -> s -> s'
 instance HFoldr f v HTip v where hFoldr _ v _ = v
 instance (HSet s, HFoldr f v s s', HFoldOp f e s' s'') => HFoldr f v (HAdd e s) s'' where hFoldr f v (HAdd e s) = hFoldOp f e (hFoldr f v s)
@@ -98,10 +105,26 @@ class HNull s b | s -> b where hNull :: s -> b
 instance HNull HTip HTrue where hNull _ = HTrue
 instance HNull (HAdd e s) HFalse where hNull _ = HFalse
 
-class (HSet s, HBool b) => HElem e s b | e s -> b where hElem :: e -> s -> b
-instance HElem e HTip HFalse where hElem _ _ = HFalse
-instance (HSet s, HNotMember e s) => HElem e (HAdd e s) HTrue where hElem _ (HAdd _ _) = HTrue
+class (HSet s, HBool b) => HElem e s b | e s -> b where hElem :: e -> s -> (b,e)
+instance HElem e HTip HFalse where hElem _ _ = (HFalse, undefined)
+instance (HSet s, HNotMember e s) => HElem e (HAdd e s) HTrue where hElem _ (HAdd e _) = (HTrue,e)
 instance (HSet s, HElem e s b) => HElem e (HAdd e' s) b where hElem e (HAdd _ s) = hElem e s
+
+-- | Type AND value level set equality.
+-- Sets must be same length, have same types, and values of each type must be equal.
+-- As this is set equality, ordering obviously doesn't matter.
+infix .==.
+(.==.) :: (HEqual s s' b) => s -> s' -> Bool
+(.==.) = hEqual
+
+class (HSet s, HSet s', HBool b) => HEqual s s' b | s s' -> b where hEqual :: s -> s' -> Bool
+instance HEqual HTip HTip HTrue where hEqual _ _ = True
+instance (HSet s) => HEqual HTip (HAdd e s) HFalse where hEqual _ _ = False
+instance (HSet s, HElem e s' b, HEqualCase b e s s' b') => HEqual (HAdd e s) s' b' where hEqual (HAdd e s) s' = hEqualCase e (hElem e s') s s'
+
+class (HBool b') => HEqualCase b e s s' b' | b e s s' -> b' where hEqualCase :: e -> (b,e) -> s -> s' -> Bool
+instance HEqualCase HFalse e s s' HFalse where hEqualCase _ _ _ _ = False
+instance (Eq e, HDelete e s' s'', HEqual s s'' b') => HEqualCase HTrue e s s' b' where hEqualCase e (_,e') s s' = (e == e') && (hEqual s (hDelete e' s'))
 
 ---------- HSET ----------------------
 data HTip = HTip         deriving (Eq)
