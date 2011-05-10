@@ -17,9 +17,10 @@ pointwise factors = undefined
 newtype (HSet s) => Network s = Network { dists :: s }
 -- heterogenous set of observations makes up the evidence
 newtype (HSet s, Variable s) => Evidence s = Evidence s
+    deriving (Show)
 
 data FoldWithVarsHCUnion = FoldWithVarsHCUnion
-instance (HUnion a b s', HSet s', HUnion s s' s'') => HFoldOp FoldWithVarsHCUnion (HC a b) s s'' where hFoldOp _ e s = hUnion s (varsHC e)
+instance (HUnion a b s', HSet s', HUnion s s' s'') => HFoldOp FoldWithVarsHCUnion (HC a b) s s'' where hFoldOp _ e s = s .+. (varsHC e)
 
 vars :: (HFoldr FoldWithVarsHCUnion HTip n s') => Network n -> s'
 vars n = hFoldr FoldWithVarsHCUnion HTip (dists n)
@@ -39,6 +40,24 @@ elim :: ( Variable x, HNotMember x e, Variable e
 elim x (Evidence e) n = pointwise $ hFoldr (FoldNetworkToFactors hiddens e) hEmpty ({- hReverse $-} vars n)
     where -- hiddens :: hs
           hiddens = (vars n) `hDiff` (x .>. e)
+
+-- list of probabilities, with heterogeneous sets as keys
+newtype (HSet i, Variable i, HSet o, Variable o) => Factor i o = Factor [(i,o,Float)]
+    deriving (Show)
+
+conditionOn :: (HSet e, Variable e, HIntersection e v s, HUnion s v v')
+                 => Evidence e -> v -> v'
+conditionOn (Evidence e) v = (e .*. v) .+. v
+
+mkFactor :: forall a b e a' b' s s' tf tf'.
+            ( Variable a, Variable b, Variable e, Variable a', Variable b'
+            , HSet a, HSet b, HSet e, HSet a', HSet b', HSet s, HSet s', HBool tf, HBool tf'
+            , HIntersection e a' s, HUnion s a' a, HEqual a a tf
+            , HIntersection e b s', HUnion s' b b', HEqual b' b' tf', a ~ a', b ~ b')
+         => HC a b -> Evidence e -> Factor a' b'
+mkFactor (HC f) e = Factor [(i,o,p) | i <- nubBy (.==.) $ map (conditionOn e) (domain :: [a'])
+                                    , (o,p) <- f i
+                                    , o .==. (conditionOn e o)] -- also need to condition o on e
 
 -- sumout :: Var -> [Factor] -> [Factor]
 sumout = undefined

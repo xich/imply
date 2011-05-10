@@ -35,19 +35,25 @@ instance (HUnion (HAdd e s) s' s'') => HUnionCase HFalse s e s' s'' where hUnion
 instance (HUnion s s' s'') => HUnionCase HTrue s e s' s'' where hUnionCase _ s _ s' = hUnion s s'
 
 -- | Type level intersection, keeping values present in the first set.
-infixl .*.
-hIntersection, (.*.) :: (HIntersection HTip s s' s'') => s -> s' -> s''
-(.*.) = hIntersection
-hIntersection = hIntersection' HTip
+class HIntersection s s' s'' | s s' -> s'' where
+    hIntersection :: s -> s' -> s''
+instance (HIntersection' HTip s s' s'') => HIntersection s s' s'' where
+    hIntersection = hIntersection' HTip
 
-class HIntersection a s s' s'' | a s s' -> s'' where hIntersection' :: a -> s -> s' -> s''
-instance HIntersection a HTip s' a where hIntersection' acc _ _ = acc
-instance (HElem e s' b, HIntersectionCase b a e s s' s'') => HIntersection a (HAdd e s) s' s''
+infixl .*.
+-- hIntersection, (.*.) :: (HIntersection s s' s'') => s -> s' -> s''
+(.*.) :: (HIntersection s s' s'') => s -> s' -> s''
+(.*.) = hIntersection
+-- hIntersection = hIntersection' HTip
+
+class HIntersection' a s s' s'' | a s s' -> s'' where hIntersection' :: a -> s -> s' -> s''
+instance HIntersection' a HTip s' a where hIntersection' acc _ _ = acc
+instance (HElem e s' b, HIntersectionCase b a e s s' s'') => HIntersection' a (HAdd e s) s' s''
     where hIntersection' a (HAdd e s) s' = hIntersectionCase (fst $ hElem e s') a e s s'
 
 class (HBool b) => HIntersectionCase b a e s s' s'' | b a e s s' -> s'' where hIntersectionCase :: b -> a -> e -> s -> s' -> s''
-instance (HIntersection a s s' s'') => HIntersectionCase HFalse a e s s' s'' where hIntersectionCase _ a _ s s' = hIntersection' a s s'
-instance (HIntersection (HAdd e a) s s' s'') => HIntersectionCase HTrue a e s s' s''
+instance (HIntersection' a s s' s'') => HIntersectionCase HFalse a e s s' s'' where hIntersectionCase _ a _ s s' = hIntersection' a s s'
+instance (HIntersection' (HAdd e a) s s' s'') => HIntersectionCase HTrue a e s s' s''
     where hIntersectionCase _ a e s s' = hIntersection' (HAdd e a) s s'
 
 -- | Type level deletion, deletes any value matching the type of the first argument, which is a witness only
