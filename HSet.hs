@@ -6,6 +6,13 @@ class Error x
 data TypeNotFound e
 data TypeFound e
 
+-- | Type level reordering. Values in s are put in same order as s'
+-- Values whose types are not in s' are discarded
+-- This is necessary to apply functions that take HSets as arguments
+class (HSet s, HSet s') => HReorder s s' where hReorder :: s -> s' -> s'
+instance (HSet s) => HReorder s HTip where hReorder _ _ = HTip
+instance (HMember e s, HSet s', HReorder s s') => HReorder s (HAdd e s') where hReorder s (HAdd e s') = HAdd (hMember s) (hReorder s s')
+
 class (HSet s) => HMember e s where hMember :: s -> e
 instance Error (TypeNotFound e) => HMember e HTip where hMember _ = undefined
 instance (HSet s, HNotMember e s) => HMember e (HAdd e s) where hMember (HAdd e _) = e
