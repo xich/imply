@@ -33,6 +33,11 @@ infixl .+.
 (.+.) :: (HUnion s s' s'') => s -> s' -> s''
 (.+.) = hUnion
 
+{-
+-- Why does this force us to propagate the HDiff and HMerge constraints in some places but not others?
+class HUnion s s' s'' | s s' -> s'' where hUnion :: s -> s' -> s''
+instance (HDiff s' s d, HMerge s d s'') => HUnion s s' s'' where hUnion s s' = hMerge s (hDiff s' s)
+-}
 class HUnion s s' s'' | s s' -> s'' where hUnion :: s -> s' -> s''
 instance HUnion s HTip s where hUnion = const
 instance (HElem e s b, HUnionCase b s e s' s'') => HUnion s (HAdd e s') s'' where hUnion s (HAdd e s') = hUnionCase (fst $ hElem e s) s e s'
@@ -48,10 +53,8 @@ instance (HIntersection' HTip s s' s'') => HIntersection s s' s'' where
     hIntersection = hIntersection' HTip
 
 infixl .*.
--- hIntersection, (.*.) :: (HIntersection s s' s'') => s -> s' -> s''
 (.*.) :: (HIntersection s s' s'') => s -> s' -> s''
 (.*.) = hIntersection
--- hIntersection = hIntersection' HTip
 
 class HIntersection' a s s' s'' | a s s' -> s'' where hIntersection' :: a -> s -> s' -> s''
 instance HIntersection' a HTip s' a where hIntersection' acc _ _ = acc
