@@ -12,11 +12,11 @@ import Data.Function
 -- Distributions are just conditional distributions where
 -- the conditioning variable only has one possible value
 -- which happens 100% of the time: unit.
-type HP a = HC (Singleton ()) a
+type HP a = HC HTip a
 
 -- Distributions
 weighted :: Eq a => [(a,Float)] -> HP (Singleton a)
-weighted = mkHC . const
+weighted = mkP
 
 uniform :: Eq a => [a] -> HP (Singleton a)
 uniform xs = weighted $ zip xs (repeat 1)

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables, TypeOperators, FlexibleContexts, FlexibleInstances, UndecidableInstances #-}
 module Conditional where
 
 import HSet
@@ -20,14 +20,17 @@ varsHC _ = witness
 mkHC :: (a -> [(b,Float)]) -> HC (Singleton a) (Singleton b)
 mkHC f = HC (\ha -> [(singleton b,p) | (b,p) <- f $ hMember ha])
 
+mkP :: [(b,Float)] -> HC HTip (Singleton b)
+mkP d = HC (\htip -> [(singleton b,p) | (b,p) <- d ])
+
 -- #1 assert a and b are different, #2 is stupid afaict
 mkTupleHC :: (HNotMember a (Singleton b), HMember b (a :>: (Singleton b)))
           => ((a,b) -> [(c,Float)]) -> HC (a :>: (Singleton b)) (Singleton c)
 mkTupleHC f = HC (\hab -> [(singleton c,p) | (c,p) <- f (hMember hab, hMember hab)])
 
-instance (Variable a, Show b) => Show (HC a b) where
-    show (HC f) = unlines [show b ++ "|" ++ show a ++ ": " ++ show p | a <- domain, (b,p) <- f a]
-
+instance (HSet a, Variable a, Show b, HBool b', HNull a b') => Show (HC a b) where
+    show (HC f) = let showA = if true (hNull (witness :: a)) then (\_ -> "") else (\a -> "|" ++ show a)
+                  in unlines [show b ++ showA a ++ ": " ++ show p | a <- domain, (b,p) <- f a]
 
 -- Old definition:
 --

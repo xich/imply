@@ -12,6 +12,7 @@ import qualified Data.Map as M
 
 -- heterogenous set of HP's and HC's make up a network
 newtype (HSet s) => Network s = Network { dists :: s }
+    deriving (Show)
 -- heterogenous set of observations makes up the evidence
 newtype (HSet s, Variable s) => Evidence s = Evidence s
     deriving (Show)

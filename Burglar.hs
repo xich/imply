@@ -11,14 +11,16 @@ data Burglary = B | NotB
 instance Variable Burglary
 
 pb :: HP (Singleton Burglary)
-pb = enum [0.001,0.999]
+pb = mkP [(B,0.001),(NotB,0.999)]
+-- pb = enum [0.001,0.999]
 
 data Earthquake = E | NotE
     deriving (Bounded, Enum, Eq, Show)
 instance Variable Earthquake
 
 pe :: HP (Singleton Earthquake)
-pe = enum [0.002,0.998]
+pe = mkP [(E,0.002),(NotE,0.998)]
+-- pe = enum [0.002,0.998]
 
 data Alarm = A | NotA
     deriving (Bounded, Enum, Eq, Show)
