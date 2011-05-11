@@ -45,6 +45,7 @@ instance (Variable a, Show b) => Show (HC a b) where
 --
 --      bgivena :: C Int Char
 --      bgivena = makeC atob
+{-
 newtype C a b = C { unC :: a -> [(b,Float)] }
 
 makeC :: (a -> [(b,Float)]) -> C a b
@@ -75,7 +76,7 @@ instance (Variable a, Variable b) => Eq (C a b) where
 
 cdomain :: (Bounded a, Enum a, Eq b) => C a b -> [b]
 cdomain (C f) = List.nub $ map fst $ concatMap f [minBound..maxBound]
-
+-}
 {-
 -- P(B|A) - Conditional Probability
 newtype C a b = C { unC :: [(a,b,Float)] }
