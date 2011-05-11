@@ -169,7 +169,7 @@ instance (Show a, HShow s) => Show (HAdd a s) where
 ---------- HSET ----------------------
 
 infixr .>.
-(.>.) :: (HSet s, HNotMember e s) => e -> s -> HAdd e s
+(.>.) :: (HSet s, HNotMember e s) => e -> s -> e :>: s
 (.>.)  = HAdd
 
 type Singleton a = a :>: HTip
