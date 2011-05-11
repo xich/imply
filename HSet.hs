@@ -82,12 +82,23 @@ class HMerge s s' s'' | s s' -> s'' where hMerge :: s -> s' -> s''
 instance HSet s' => HMerge HTip s' s' where hMerge _ = id
 instance (HSet s, HSet s', HNotMember e s', HMerge s s' s'') => HMerge (HAdd e s) s' (HAdd e s'') where hMerge (HAdd e s) = HAdd e . (hMerge s)
 
--- | Type level foldr, first argument (function) must have a HFoldOp instance
+-- | Type level foldr, first argument (function) must have an HFoldOp instance
 class (HSet s) => HFoldr f v s s' | f v s -> s' where hFoldr :: f -> v -> s -> s'
 instance HFoldr f v HTip v where hFoldr _ v _ = v
 instance (HSet s, HFoldr f v s s', HFoldOp f e s' s'') => HFoldr f v (HAdd e s) s'' where hFoldr f v (HAdd e s) = hFoldOp f e (hFoldr f v s)
 
 class HFoldOp f e s s' | f e s -> s' where hFoldOp :: f -> e -> s -> s'
+
+-- | Type level filter, first argument (function) must have an HFilterOp instance
+class (HSet s) => HFilter f s s' | f s -> s' where hFilter :: f -> s -> s'
+instance HFilter f HTip HTip where hFilter _ _ = HTip
+instance (HSet s, HBool b, HFilterOp f e b, HFilterCase b e f s s') => HFilter f (HAdd e s) s' where hFilter f (HAdd e s) = hFilterCase (hFilterOp f e) e f s
+
+class HFilterCase b e f s s' | b e f s -> s' where hFilterCase :: b -> e -> f -> s -> s'
+instance (HFilter f s s') => HFilterCase HTrue e f s (HAdd e s') where hFilterCase _ e f s = HAdd e (hFilter f s)
+instance (HFilter f s s') => HFilterCase HFalse e f s s' where hFilterCase _ _ f s = hFilter f s
+
+class (HBool b) => HFilterOp f e b | f e -> b where hFilterOp :: f -> e -> b
 
 -- 1. a value of type 'a' must be in s
 -- 2. a value of type 'b' must not be in s
