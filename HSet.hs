@@ -7,8 +7,12 @@ data TypeNotFound e
 data TypeFound e
 
 -- | Type level reordering. Values in s are put in same order as s'
--- Values whose types are not in s' are discarded
+-- Values whose types are not in s' are discarded.
+-- Values whose types are not in s will trigger an error at typechecking time.
 -- This is necessary to apply functions that take HSets as arguments
+apphfn :: forall s' b s. (HSet s, HReorder s s') => (s' -> b) -> s -> b
+apphfn f s = f (hReorder s (witness :: s'))
+
 class (HSet s, HSet s') => HReorder s s' where hReorder :: s -> s' -> s'
 instance (HSet s) => HReorder s HTip where hReorder _ _ = HTip
 instance (HMember e s, HSet s', HReorder s s') => HReorder s (HAdd e s') where hReorder s (HAdd e s') = HAdd (hMember s) (hReorder s s')
