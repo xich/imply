@@ -48,4 +48,29 @@ pm = mkHC c
     where c A =    [(M,0.7) ,(NotM,0.3)]
           c NotA = [(M,0.01),(NotM,0.99)]
 
-network = Network $ pb .>. pa .>. pe .>. pj .>. (singleton pm)
+network1 = Network $ pb .>. pa .>. pe .>. pj .>. (singleton pm)
+network2 = Network $ pb .>. pa .>. (singleton pe)
+network3 = Network $ pb .>. (singleton pa2) -- this works (no hiddens)
+network4 = Network $ pb .>. pj2 .>. (singleton pa2)
+
+data Alarm2 = A2 | NotA2
+    deriving (Bounded, Enum, Eq, Show)
+instance Variable Alarm2
+
+pa2 = mkHC c
+    where c B    = [(A2,0.95),(NotA2,0.05)]
+          c NotB = [(A2,0.001),(NotA2,0.999)]
+
+data JohnCalls2 = J2 | NotJ2
+    deriving (Bounded, Enum, Eq, Show)
+instance Variable JohnCalls2
+
+pj2 = mkHC c
+    where c A2 =    [(J2,0.9) ,(NotJ2,0.1)]
+          c NotA2 = [(J2,0.05),(NotJ2,0.95)]
+
+{-
+main = do
+    let f = elim (undefined :: Burglary) (Evidence $ J .>. singleton M) network
+    print f
+-}

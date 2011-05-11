@@ -89,6 +89,17 @@ instance (HSet s, HFoldr f v s s', HFoldOp f e s' s'') => HFoldr f v (HAdd e s) 
 
 class HFoldOp f e s s' | f e s -> s' where hFoldOp :: f -> e -> s -> s'
 
+-- | Experimental HMap in terms of HFoldr
+class HMap a b s s' | a b s -> s' where
+    hMap :: (a -> b) -> s -> s'
+instance (HFoldr (HMapOp a b) HTip s s') => HMap a b s s' where
+    hMap f = hFoldr (HMapOp f) HTip
+
+data HMapOp e e' = HMapOp (e -> e')
+instance HFoldOp (HMapOp e e') e s (HAdd e' s) where hFoldOp (HMapOp f) e s = HAdd (f e) s
+
+-- hmap f = hFoldr (HMapOp f)
+
 -- | Type level filter, first argument (function) must have an HFilterOp instance
 class (HSet s) => HFilter f s s' | f s -> s' where hFilter :: f -> s -> s'
 instance HFilter f HTip HTip where hFilter _ _ = HTip

@@ -5,6 +5,7 @@ module Bayes where
 import Conditional
 import Distribution
 import HSet
+import Utils
 import Variable
 
 import Data.List
@@ -18,26 +19,91 @@ newtype (HSet s, Variable s) => Evidence s = Evidence s
     deriving (Show)
 
 data FoldWithVarsHCUnion = FoldWithVarsHCUnion
-instance (HUnion a b s', HSet s', HUnion s s' s'') => HFoldOp FoldWithVarsHCUnion (HC a b) s s'' where hFoldOp _ e s = s .+. (varsHC e)
+instance ( HUnion a b s', HSet s', HUnion s s' s'')
+        => HFoldOp FoldWithVarsHCUnion (HC a b) s s'' where
+    hFoldOp _ e s = s .+. (varsHC e)
 
 vars :: (HFoldr FoldWithVarsHCUnion HTip n s') => Network n -> s'
 vars n = hFoldr FoldWithVarsHCUnion HTip (dists n)
 
-data FoldNetworkToFactors hs es = FoldNetworkToFactors hs es
-instance (HBool b, HElem v hs b, Variable v, Variable hs, Variable es
-         , {- not real yet -} s'' ~ HAdd v s, HNotMember v s) => HFoldOp (FoldNetworkToFactors hs es) v s s'' where
-    hFoldOp (FoldNetworkToFactors hs es) v factors = let newFactor = makefactor v es
-                                                         factors' = newFactor .>. factors
-                                                     in if (true . fst) (v `hElem` hs) then sumout v factors' else factors'
+-- Holy context explosion batman!
+data FoldNetworkToFactors es = FoldNetworkToFactors es
+instance ( Variable a, Variable b, Variable vs, Variable es, Variable a', Variable b'
+         , HUnion a b vs
+         , HIntersection es a s', HUnion s' a a', HReorder a' a
+         , HIntersection es b s'', HUnion s'' b b', HReorder b' b
+         , HEqual a a, HEqual b b, HNotMember (Factor vs) s
+         , HSet es, HSet s', HSet s'', HSet vs)
+        => HFoldOp (FoldNetworkToFactors es) (HC a b) s (HAdd (Factor vs) s) where
+    hFoldOp (FoldNetworkToFactors es) hc factors = (mkFactor hc (Evidence es)) .>. factors
 
-elim :: ( Variable x, HNotMember x e, Variable e
-        , HSet n, HFoldr FoldWithVarsHCUnion HTip n vars
-        , HFoldr (FoldNetworkToFactors hs e) HTip vars fs
-        , HDiff vars (x :>: e) hs)
-     => x -> Evidence e -> Network n -> HP x
-elim x (Evidence e) n = pointwise $ hFoldr (FoldNetworkToFactors hiddens e) hEmpty ({- hReverse $-} vars n)
-    where -- hiddens :: hs
+data Contains h = Contains h
+instance (HElem h s b) => HFilterOp (Contains h) (Factor s) b where
+    hFilterOp _ _ = fst $ hElem (undefined :: h) (witness :: s)
+
+data SetAll a = SetAll a
+instance (Variable a, Variable as, HSet as, HElem a as b, HNotMember (Factor as) s)
+        => HFoldOp (SetAll a) (Factor as) s (HAdd (Factor as) s) where
+    hFoldOp (SetAll a) factor factors = (set a factor) .>. factors
+
+set :: (Variable a, Variable as, HSet as, HBool b, HElem a as b) => a -> Factor as -> Factor as
+set a (Factor as) = Factor [ (v,p) | (v,p) <- as, let (tf,a') = hElem a v, true tf, a == a' ]
+
+data SumoutHiddens = SumoutHiddens
+instance ( Variable h, Variable s, Variable s', HSet fs, HSet fs'
+         , HFilter (Contains h) fs fs', HDiff fs fs' fs''
+         , HFoldr (SetAll h) HTip fs' fs'''
+         , HFoldr FoldPointwise (Factor HTip) fs''' (Factor s)
+         , HNotMember (Factor s') fs'', HDelete h s s', HEqual s' s')
+        => HFoldOp SumoutHiddens h fs (HAdd (Factor s') fs'') where
+    hFoldOp _ h fs = (sumout h fs') .>. fs''
+        where fs' = hFilter (Contains h) fs -- factors that contain h
+              fs'' = hDiff fs fs'           -- factors that don't contain h
+
+sumout :: forall h fs fs' s s'.
+           ( Variable h, Variable s, Variable s'
+           , HSet fs
+           , HFoldr (SetAll h) HTip fs fs'
+           , HFoldr FoldPointwise (Factor HTip) fs' (Factor s)
+           , HDelete h s s', HEqual s' s')
+        => h -> fs -> Factor s'
+sumout h fs = foldr1 pointwiseA withouth
+    where withouth = [ Factor [ (hDelete h v,p) | (v,p) <- f ] | Factor f <- products ]
+          products = [ foldPointwise $ hFoldr (SetAll v) hEmpty fs | v <- domain :: [h]]
+
+elim :: ( Variable x, Variable e, HNotMember x e
+        , HFoldr FoldWithVarsHCUnion HTip n s
+        , HDiff s (HAdd x e) hs
+        , HFoldr (FoldNetworkToFactors e) HTip n fs
+        , HFoldr SumoutHiddens fs hs fs'
+        , Variable s', HSet s'
+        , HFoldr FoldPointwise (Factor HTip) fs' (Factor s')
+        , Variable s'', HSet s''
+        , HDiff s' e s'')
+     => x -> Evidence e -> Network n -> HP s''
+elim x (Evidence e) n = toHP $ rmEvidence (Evidence e) $ foldPointwise reduced
+    where -- factors :: fs
+          factors = hFoldr (FoldNetworkToFactors e) hEmpty (dists n)
+          -- hiddens :: hs
           hiddens = (vars n) `hDiff` (x .>. e)
+          -- reduced :: fs'
+          reduced = hFoldr SumoutHiddens factors hiddens
+
+toHP :: (Variable a, HSet a) => Factor a -> HP a
+toHP (Factor as) = HC (\htip -> normalize as)
+
+rmEvidence :: ( Variable e, Variable ea, Variable a
+              , HSet e, HSet ea, HSet a, HDiff ea e a)
+           => Evidence e -> Factor ea -> Factor a
+rmEvidence (Evidence e) (Factor eas) = Factor [(hDiff ea e,p) | (ea,p) <- eas]
+
+data FoldPointwise = FoldPointwise
+instance ( Variable bs, Variable abs, Variable as
+         , HUnion as bs abs, HIntersection bs as s', HIntersection as bs s, HEqual s s'
+         , HSet bs, HSet abs, HSet as)
+        => HFoldOp FoldPointwise (Factor as) (Factor bs) (Factor abs) where
+    hFoldOp _ as bs = pointwiseM as bs
+foldPointwise fs = hFoldr FoldPointwise pointwiseMident fs
 
 -- list of probabilities, with heterogeneous sets as keys
 newtype (HSet vs, Variable vs) => Factor vs = Factor [(vs,Float)]
@@ -59,23 +125,22 @@ mkFactor (HC f) e = Factor [(i .+. o,p) | i <- nubBy (.==.) $ map (conditionOn e
                                         , (o,p) <- f i
                                         , o .==. (conditionOn e o)]
 
-point :: ( HSet as, HSet bs, HSet abs
-         , Variable as, Variable bs, Variable abs
-         , HIntersection as bs s, HIntersection bs as s', HEqual s s'
-         , HUnion as bs abs)
-      => Factor as -> Factor bs -> Factor abs
-point (Factor as) (Factor bs) = Factor [ (a .+. b, p * q)
-                                       | (a,p) <- as
-                                       , (b,q) <- bs
-                                       , (a .*. b) .==. (b .*. a) ]
+pointwiseM :: ( HSet as, HSet bs, HSet abs
+              , Variable as, Variable bs, Variable abs
+              , HIntersection as bs s, HIntersection bs as s', HEqual s s'
+              , HUnion as bs abs)
+           => Factor as -> Factor bs -> Factor abs
+pointwiseM (Factor as) (Factor bs) = Factor [ (a .+. b, p * q)
+                                            | (a,p) <- as
+                                            , (b,q) <- bs
+                                            , (a .*. b) .==. (b .*. a) ]
 
--- pointwise :: [Factor] -> HP a
-pointwise factors = undefined
+pointwiseMident :: Factor HTip
+pointwiseMident = Factor [(hEmpty,1.0)]
 
--- sumout :: Var -> [Factor] -> [Factor]
-sumout = undefined
-
--- makefactor :: Var -> Events s -> Factor
--- not the real type yet
-makefactor :: (Variable v, Variable e) => v -> e -> v
-makefactor = const
+pointwiseA :: (HSet as, Variable as, HEqual as as)
+           => Factor as -> Factor as -> Factor as
+pointwiseA (Factor as) (Factor bs) = Factor [ (a, p + q)
+                                            | (a,p) <- as
+                                            , (b,q) <- bs
+                                            , a .==. b ]
