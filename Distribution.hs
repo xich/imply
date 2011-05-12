@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 -- Compare with PFP: http://web.engr.oregonstate.edu/~erwig/papers/PFP_JFP06.pdf
 module Distribution where
 
@@ -37,6 +38,19 @@ enum = weighted . zip [minBound..maxBound]
 product :: (Applicative p) => p a -> p b -> p (a,b)
 product as bs = (,) <$> as <*> bs
 
+prod :: (HUnion a b abs) => HP a -> HP b -> HP abs
+prod (HC as) (HC bs) = HC (\htip -> [(a .+. b, p*q)
+                                    | (a,p) <- as htip
+                                    , (b,q) <- bs htip ])
+
+
+divHC :: ( HSet abs, HSet a, HSet b
+       , HIntersection abs a a'
+       , HDiff abs a b
+       , HEqual a a', HEqual a a) => HP abs -> HP a -> HC a b
+divHC (HC abs) (HC as) = HC (\a -> [ (hDiff s a,p/q)
+                              | (s,p) <- filter (\(s,_) -> a .==. (s .*. a)) $ concatMap abs domain
+                              , (_,q) <- filter (\(s,_) -> a .==. s) $ concatMap as domain])
 -- note: P(A,B) = P(B|A)P(A)
 -- this is different in product above, because we are chaining
 -- prod :: (Eq a) => C a b -> P a -> P (a,b) -- the following is more general
