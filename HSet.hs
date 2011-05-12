@@ -10,12 +10,13 @@ data TypeFound e
 -- Values whose types are not in s' are discarded.
 -- Values whose types are not in s will trigger an error at typechecking time.
 -- This is necessary to apply functions that take HSets as arguments
-apphfn :: forall s' b s. (HSet s, HReorder s s') => (s' -> b) -> s -> b
-apphfn f s = f (hReorder s (witness :: s'))
+apphfn :: forall s' b s. (HSet s, HIso s s') => (s' -> b) -> s -> b
+apphfn f = f . hReorder
 
-class (HSet s, HSet s') => HReorder s s' where hReorder :: s -> s' -> s'
-instance (HSet s) => HReorder s HTip where hReorder _ _ = HTip
-instance (HMember e s, HSet s', HReorder s s') => HReorder s (HAdd e s') where hReorder s (HAdd e s') = HAdd (hMember s) (hReorder s s')
+class (HSet s, HSet s') => HIso s s' where hReorder :: s -> s'
+instance (HSet s) => HIso s HTip where hReorder _ = HTip
+instance (HMember e s, HSet s', HIso s s') => HIso s (HAdd e s') where
+    hReorder s = HAdd (hMember s) (hReorder s)
 
 class (HSet s) => HMember e s where hMember :: s -> e
 instance Error (TypeNotFound e) => HMember e HTip where hMember _ = undefined

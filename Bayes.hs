@@ -30,8 +30,8 @@ vars n = hFoldr FoldWithVarsHCUnion HTip (dists n)
 data FoldNetworkToFactors es = FoldNetworkToFactors es
 instance ( Variable a, Variable b, Variable vs, Variable es, Variable a', Variable b'
          , HUnion a b vs
-         , HIntersection es a s', HUnion s' a a', HReorder a' a
-         , HIntersection es b s'', HUnion s'' b b', HReorder b' b
+         , HIntersection es a s', HUnion s' a a', HIso a' a
+         , HIntersection es b s'', HUnion s'' b b', HIso b' b
          , HEqual a a, HEqual b b, HNotMember (Factor vs) s
          , HSet es, HSet s', HSet s'', HSet vs)
         => HFoldOp (FoldNetworkToFactors es) (HC a b) s (HAdd (Factor vs) s) where
@@ -110,15 +110,15 @@ newtype (HSet vs, Variable vs) => Factor vs = Factor [(vs,Float)]
     deriving (Show)
 
 conditionOn :: forall e v s v'.
-               (HSet e, Variable e, HSet v, HIntersection e v s, HUnion s v v', HReorder v' v)
+               (HSet e, Variable e, HSet v, HIntersection e v s, HUnion s v v', HIso v' v)
                  => Evidence e -> v -> v
-conditionOn (Evidence e) v = ((e .*. v) .+. v) `hReorder` (witness :: v)
+conditionOn (Evidence e) v = hReorder $ (e .*. v) .+. v
 
 mkFactor :: forall a b e s s' a' b' vs.
             ( Variable a, Variable b, Variable e, Variable a', Variable b'
             , HSet a, HSet b, HSet e, HSet s, HSet s', HSet a', HSet b'
-            , HIntersection e a s, HUnion s a a', HReorder a' a, HEqual a a
-            , HIntersection e b s', HUnion s' b b', HReorder b' b, HEqual b b
+            , HIntersection e a s, HUnion s a a', HIso a' a, HEqual a a
+            , HIntersection e b s', HUnion s' b b', HIso b' b, HEqual b b
             , Variable vs, HSet vs, HUnion a b vs)
          => HC a b -> Evidence e -> Factor vs
 mkFactor (HC f) e = Factor [(i .+. o,p) | i <- nubBy (.==.) $ map (conditionOn e) (domain :: [a])
