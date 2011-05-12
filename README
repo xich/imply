@@ -1,0 +1,3 @@
+In (ridiculously) early stages of development.
+
+Goal is a DSL for probability in Haskell that is strongly typed and syntactically concise (and someday performant).
