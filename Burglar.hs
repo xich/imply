@@ -69,8 +69,6 @@ pj2 = mkHC c
     where c A2 =    [(J2,0.9) ,(NotJ2,0.1)]
           c NotA2 = [(J2,0.05),(NotJ2,0.95)]
 
-{-
 main = do
-    let f = elim (undefined :: Burglary) (Evidence $ J .>. singleton M) network
+    let f = elim (undefined :: Burglary) (Evidence $ J .>. singleton M) network1
     print f
--}

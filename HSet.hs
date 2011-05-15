@@ -196,6 +196,7 @@ infixr .>.
 (.>.)  = HAdd
 
 type Singleton a = a :>: HTip
+singleton :: e -> Singleton e
 singleton = (.>. HTip)
 hEmpty = HTip
 
